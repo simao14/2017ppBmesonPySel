@@ -32,8 +32,8 @@ def main():
     print("files")
     fileS = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small2.root")
     fileB = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small2.root")
-    #fileS=uproot.open("~/Desktop/UNI/LIP/mnt/data/BPMC_3_60.root")
-    #fileB=uproot.open("~/Desktop/UNI/LIP/mnt/data/BPData_3_60.root")
+    #fileS=uproot.open("../results/rootfiles/BPMC_nom_BDT.root")
+    #fileB=uproot.open("../results/rootfiles/BPData_nom_BDT.root")
     
     signal,background = utils.prepdata(fileS,fileB,opt.ptmin,opt.ptmax)
     
