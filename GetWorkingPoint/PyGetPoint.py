@@ -73,7 +73,7 @@ def main():
     data_x=pd.DataFrame(x.to_numpy())
     data_x.columns=stage
     data_x["label"]=y.to_numpy()
-    data_x["NN_output"]=ypred
+    data_x["NN_output"]=ypred.detach().numpy()
     data_x["scale_weight"]=np.ones(len(y.to_numpy()))
     variable="NN_output"
     print("getting factors")
@@ -128,9 +128,9 @@ def main():
         for i in range(10):
             data_shuf=data_imp.copy()
             random.shuffle(data_shuf[char])
-            pred+=torch.nn.functional.softmax(model(torch.tensor(data_shuf.values)),dim=1)[:,1]
+            pred+=torch.nn.functional.softmax(model(torch.tensor(data_shuf.values)),dim=1)[:,1].detach().numpy()
         pred=pred/10
-        tab.append(abs(ypred-pred).mean().item())
+        tab.append(abs(ypred.detach().numpy()-pred).mean().item())
 
 
     plt.clf()

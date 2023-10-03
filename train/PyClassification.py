@@ -18,7 +18,7 @@ import utils_factors
 class FeedforwardNetwork(nn.Module):
     def __init__(
             self, n_classes, n_features, hidden_size, layers,
-            activation_type, dropout, **kwargs):
+            activation_type, dropout):
         
         super().__init__()
 
@@ -35,7 +35,7 @@ class FeedforwardNetwork(nn.Module):
         self.order.append(self.output_layer)                                
 
         
-    def forward(self, x, **kwargs):
+    def forward(self, x):
         
         x = self.order(x)                             
         return x

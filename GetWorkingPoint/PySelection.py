@@ -19,7 +19,7 @@ def main():
     parser.add_argument('usemc' , type=int)
     parser.add_argument('-bins', type=int, nargs='+', default=[3,5,7,10,15,20,30,50,60])
     parser.add_argument('-stages', type=int, nargs='+', default=[0,2,4,7,8,9,11,15]) 
-    parser.add_argument('-cuts', type=int, nargs='+', default=[0.95,0.95,0.95,0.95,0.95,0.95,0.95,0.95]) 
+    parser.add_argument('-cuts', type=int, nargs='+', default=[0.5,0.85,0.88,0.89,0.88,0.67,0.89,0.61]) 
     opt = parser.parse_args()
     
     print("files")
@@ -44,7 +44,7 @@ def main():
         data_var=data[stage]
         dset = torch.tensor(data_var.to_numpy(),dtype=torch.float32)
         ypred = torch.nn.functional.softmax(model(dset),dim=1)[:,1]
-        data["score"]=ypred
+        data["score"]=ypred.detach().numpy()
         data_pred=pd.concat([data_pred,data],axis=0,ignore_index=True)
 
     NN_cut=(((data_pred.Bpt>3) & (data_pred.Bpt<5) & (data_pred.score>cut[0])) | ((data_pred.Bpt>5) & (data_pred.Bpt<7) & (data_pred.score>cut[1])) | ((data_pred.Bpt>7) & (data_pred.Bpt<10) & (data_pred.score>cut[2])) | ((data_pred.Bpt>10) & (data_pred.Bpt<15) & (data_pred.score>cut[3])) | ((data_pred.Bpt>15) & (data_pred.Bpt<20) & (data_pred.score>cut[4])) | ((data_pred.Bpt>20) & (data_pred.Bpt<30) & (data_pred.score>cut[5])) | ((data_pred.Bpt>30) & (data_pred.Bpt<50) & (data_pred.score>cut[6])) | ((data_pred.Bpt>50) & (data_pred.Bpt<60) & (data_pred.score>cut[7])))
