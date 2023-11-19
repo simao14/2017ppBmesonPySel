@@ -12,32 +12,35 @@ sys.path.insert(0, '../')
 import utils
 import utils_factors
 
-def plot(epochs, plottable, xlabel="Epochs", ylabel='', name='',label=None):
-    plt.clf()
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.plot(epochs, plottable, label=label)
-    plt.legend()
-    plt.grid(visible=True)
-    plt.savefig('../results/sel/%s.pdf' % (name), bbox_inches='tight')
     
-
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('meson', type=int)
     parser.add_argument('ptmin', type=float)
     parser.add_argument('ptmax', type=float)
-    parser.add_argument('-stages', type=int, nargs='+', default=[0,2,4,7,8,9,11,15]) #[0,2,4,7,8,9,11,12,15] #0,2,4,7,8,11
     opt = parser.parse_args()
     
+    if opt.meson == 0:
+        stages = [0,2,4,7,8,9,11,15]
+        meson = "BP"
+        binmin = 3
+        binmax = 60
+    else: 
+        stages = [0,1,2,3,4,5,6,7,8,9,11,15]
+        meson = "Bs"
+        binmin = 3
+        binmax = 50
+
     print("files")
-    fileS = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small2.root")
-    fileB = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small2.root")
-    #fileS=uproot.open("../results/rootfiles/BPMC_nom_BDT.root")
-    #fileB=uproot.open("../results/rootfiles/BPData_nom_BDT.root")
+    fileS = uproot.open(f"/lstore/cms/simao/sample/{meson}MC_{binmin}_{binmax}_small.root")
+    fileB = uproot.open(f"/lstore/cms/simao/sample/{meson}Data_{binmin}_{binmax}_small.root")
     
-    signal,background = utils.prepdata(fileS,fileB,opt.ptmin,opt.ptmax)
+    #fileR = uproot.open(f"/user/s/smcosta/data/{meson}Data_nom.root")
+    fileR=uproot.open(f"../results/rootfiles/{meson}Data_nom_BDT.root") #use this only for pt 3--5
     
-    stage=utils.varset(opt.stages)
+    signal,background = utils.prepdata(fileS,fileB,opt.ptmin,opt.ptmax,opt.meson)
+    
+    stage=utils.varset(stages)
     signal_var=signal[stage]
     background_var=background[stage]
     
@@ -50,23 +53,29 @@ def main():
     # initialize the model
     
     bst = xgb.Booster()
-    bst.load_model("../results/models/Xgb_3.0_60.0.model")
+    bst.load_model(f"../results/{meson}/models/Xgb_{binmin}_{binmax}.model")
 
     ypred=bst.predict(dset)
 
 
-    stagelist=utils.replacespecial(opt.stages)
+    stagelist=utils.replacespecial(stages)
     config = "BDT-{}-{}-{}".format(opt.ptmin, opt.ptmax,stagelist)
 
-    if not os.path.exists("../results/sel/%s" % config):
-        os.makedirs("../results/sel/%s" % config)
+    if not os.path.exists(f"../results/{meson}/sel/{config}"):
+        os.makedirs(f"../results/{meson}/sel/{config}")
     
-    utils.varplot(stage,signal_var,background_var,config,"sel")
+    utils.varplot(stage,signal_var,background_var,config,"sel",meson)
 
 
     nn_fpr, nn_tpr, _ = metrics.roc_curve(y.to_numpy(), ypred)
     auc=metrics.auc(nn_tpr,1-nn_fpr)
-    plot(nn_tpr,1-nn_fpr,ylabel="background efficiency", xlabel="signal efficiency",name='{}/ROC-curve'.format(config),label=f'auc:{auc:.3f};')
+    plt.clf()
+    plt.xlabel("signal efficiency")
+    plt.ylabel("background efficiency")
+    plt.plot(nn_tpr, 1-nn_fpr, label=f'auc:{auc:.3f};')
+    plt.legend()
+    plt.grid(visible=True)
+    plt.savefig(f'../results/{meson}/sel/{config}/ROC-Curve.pdf', bbox_inches='tight')
     
     data_x=pd.DataFrame(x.to_numpy())
     data_x.columns=stage
@@ -75,7 +84,7 @@ def main():
     data_x["scale_weight"]=np.ones(len(y.to_numpy()))
     variable="BDT_output"
     print("getting factors")
-    fs,fb = utils_factors.get_factors(fileS,uproot.open("/user/s/smcosta/data/BPData_nom.root"),opt.ptmin,opt.ptmax)
+    fs,fb = utils_factors.get_factors(fileS,fileR,opt.ptmin,opt.ptmax,opt.meson)
     sig,cuts,signeff,backeff=utils.significancecalc(data_x,100,variable,fs,fb)
 
     plt.figure()
@@ -84,7 +93,7 @@ def main():
     plt.xlabel(variable +' cut')
     plt.ylabel('Significance')
     plt.legend()
-    plt.savefig("../results/sel/%s/significance.pdf" % config , bbox_inches='tight')
+    plt.savefig(f"../results/{meson}/sel/{config}/significance.pdf", bbox_inches='tight')
 
     plt.clf()
     plt.xlabel("BDT_output cut")
@@ -92,7 +101,7 @@ def main():
     plt.plot(cuts, signeff,label="Signal")
     plt.plot(cuts, backeff,label="background")
     plt.legend()
-    plt.savefig('../results/sel/%s/sig_back_eff.pdf' % config, bbox_inches='tight')
+    plt.savefig(f'../results/{meson}/sel/{config}/sig_back_eff.pdf', bbox_inches='tight')
 
     plt.clf()
     corr=signal[stage].corr()
@@ -103,7 +112,7 @@ def main():
     for (i,j),z in np.ndenumerate(corr):
         plt.text(j, i, '{:0.1f}'.format(z), ha='center', va='center', color="white")
     plt.colorbar()
-    plt.savefig("../results/sel/corrmatrix_sig_{}_{}.pdf".format(opt.ptmin,opt.ptmax), bbox_inches='tight')
+    plt.savefig(f"../results/{meson}/sel/corrmatrix_sig_{opt.ptmin}_{opt.ptmax}.pdf", bbox_inches='tight')
 
    
     plt.clf()
@@ -115,8 +124,7 @@ def main():
     for (i,j),z in np.ndenumerate(corr):
         plt.text(j, i, '{:0.1f}'.format(z), ha='center', va='center', color="white")
     plt.colorbar()
-    plt.savefig("../results/sel/corrmatrix_back_{}_{}.pdf".format(opt.ptmin,opt.ptmax), bbox_inches='tight')
-
+    plt.savefig(f"../results/{meson}/sel/corrmatrix_back_{opt.ptmin}_{opt.ptmax}.pdf", bbox_inches='tight')
 
     feat=pd.DataFrame.from_dict([bst.get_score(importance_type='gain')])
     feat.columns=stage
@@ -124,7 +132,7 @@ def main():
     plt.title("Feature importance")
     feat.T.plot.barh(legend=False)
     plt.xlabel("BDT_output difference")
-    plt.savefig("../results/sel/%s/feature_importance.pdf" % config, bbox_inches='tight')
+    plt.savefig(f"../results/{meson}/sel/{config}/feature_importance.pdf", bbox_inches='tight')
 
     
 

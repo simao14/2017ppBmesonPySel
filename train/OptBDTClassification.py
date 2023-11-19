@@ -10,17 +10,27 @@ import sys
 sys.path.insert(0, '../')
 import utils
 
-ptmin = 3
-ptmax = 60
+meson_n = 1
+
 iter = 20
-varstage = [0,2,4,7,8,9,11,15] #0,2,4,7,8,11
+
+if meson_n == 0:
+    ptmin = 3
+    ptmax = 60
+    varstage = [0,2,4,7,8,9,11,15] #0,2,4,7,8,11
+    meson = "BP"
+else:
+    ptmin = 3
+    ptmax = 50
+    varstage = [0,1,2,3,4,5,6,7,8,9,11,15] #0,2,4,7,8,11
+    meson = "Bs"
 
 def objective(trial):
 
-    fileS = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small2.root")
-    fileB = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small2.root")
+    fileS = uproot.open(f"/lstore/cms/simao/sample/{meson}MC_{ptmin}_{ptmax}_small.root")
+    fileB = uproot.open(f"/lstore/cms/simao/sample/{meson}Data_{ptmin}_{ptmax}_small.root")
 
-    signal,background = utils.prepdata(fileS,fileB,ptmin,ptmax)
+    signal,background = utils.prepdata(fileS,fileB,ptmin,ptmax,meson_n)
     stage=utils.varset(varstage)
 
     signal_var=signal[stage]
@@ -70,10 +80,10 @@ def objective(trial):
 
 
 if __name__ == "__main__":
-    if not os.path.exists("../results/models"):
-        os.makedirs("../results/models")
+    if not os.path.exists(f"../results/{meson}/models"):
+        os.makedirs(f"../results/{meson}/models")
     study_name="BDToptim.study"
-    storage_name = "sqlite:///../results/models/{}_{}_{}.db".format(study_name,ptmin,ptmax)
+    storage_name = "sqlite:///../results/{}/models/{}_{}_{}.db".format(meson,study_name,ptmin,ptmax)
     study = optuna.create_study(study_name=study_name, storage=storage_name,
         pruner=optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
     )

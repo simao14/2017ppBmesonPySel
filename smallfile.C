@@ -18,36 +18,77 @@ using namespace std;
 using std::cout;
 using std::endl;
 
-void smallfile(){
+enum Tracking{
+  loose = 0,
+  standard = 1,
+  tight = 2,
+};
+
+std::map<Tracking, double> ptErr{
+  {Tracking::standard, 0.1},
+  {Tracking::tight, 0.05},
+  {Tracking::loose, 0.15}
+};
+
+std::map<Tracking, double> chi2Nlayer{
+  {Tracking::standard, 0.18},
+  {Tracking::tight, 0.15},
+  {Tracking::loose, 0.18}
+};
+
+void smallfile(int meson_n){
 
     cout<<"Running"<<endl;
-    TFile* fileS = new TFile("/lstore/cms/simao/sample/BPMC_3_60.root");
-    TFile* fileB = new TFile("/lstore/cms/simao/sample/BPData_3_60.root");
+    TString var;
+    TString min;
+    TString max;
 
-    auto outS = "/lstore/cms/simao/sample/BPMC_3_60_small.root";
+    if (meson_n==0){var="BP";min="3";max="60";}
+    else {var="Bs";min="3";max="50";}
 
-    auto outB = "/lstore/cms/simao/sample/BPData_3_60_small.root";
+    TFile* fileS = new TFile(Form("/data3/smcosta/2017ppBmesonTMVA/%s/sample/%sMC_%s_%s.root",var.Data(),var.Data(),min.Data(),max.Data()));
+    TFile* fileB = new TFile(Form("/data3/smcosta/2017ppBmesonTMVA/%s/sample/%sData_%s_%s.root",var.Data(),var.Data(),min.Data(),max.Data()));
+
+    auto outS = Form("/data3/smcosta/2017ppBmesonTMVA/%s/sample/%sMC_%s_%s_small.root",var.Data(),var.Data(),min.Data(),max.Data());
+    auto outB = Form("/data3/smcosta/2017ppBmesonTMVA/%s/sample/%sData_%s_%s_small.root",var.Data(),var.Data(),min.Data(),max.Data());
+    auto outG = Form("/data3/smcosta/2017ppBmesonTMVA/%s/sample/%sGen.root",var.Data(),var.Data());
 
     TFile* outfS = new TFile( outS,"RECREATE");
     TFile* outfB = new TFile( outB,"RECREATE");
+    TFile* outfG = new TFile( outG,"RECREATE");
+
 
     TTree* background;
+    TTree* backgroundroot;
     TTree* backgroundhl;
     TTree* backgroundskim;
     TTree* backgroundnew = new TTree("background2", "background full");
-    background = (TTree*) fileB->Get("Bfinder/ntKp");
+
+    if (meson_n==0){ background = (TTree*) fileB->Get("Bfinder/ntKp");}
+    else { background = (TTree*) fileB->Get("Bfinder/ntphi");}
+    backgroundroot = (TTree*) fileB->Get("Bfinder/root");
     backgroundhl = (TTree*) fileB->Get("hltanalysis/HltTree");
     backgroundskim = (TTree*) fileB->Get("skimanalysis/HltTree");
     
 
     TTree* signal;
+    TTree* gen;
+    TTree* signalroot;
     TTree* signalhl;
     TTree* signalskim;
+    TTree* signalhi;
     TTree* signalnew = new TTree("signal2", "signal full");
-    signal = (TTree*) fileS->Get("Bfinder/ntKp");
+    if (meson_n==0){ signal = (TTree*) fileS->Get("Bfinder/ntKp");}
+    else { signal = (TTree*) fileS->Get("Bfinder/ntphi");}
+    signalroot = (TTree*) fileS->Get("Bfinder/root");
     signalhl = (TTree*) fileS->Get("hltanalysis/HltTree");
     signalskim = (TTree*) fileS->Get("skimanalysis/HltTree");
-    
+    signalhi = (TTree*) fileS->Get("hiEvtAnalyzer/HiTree");
+    gen = (TTree*) fileS->Get("Bfinder/ntGen");
+
+
+    TTree* gennew = gen->CloneTree(0);
+
     const int ncand=1000;
     std::array<Float_t,ncand> Btrk1Dz1B;
     std::array<Float_t,ncand> Btrk1DzError1B;
@@ -67,6 +108,7 @@ void smallfile(){
     std::array<Bool_t,ncand> Bmu2isTriggeredB;
     std::array<Float_t,ncand> Btrk1PtB;
     std::array<Float_t,ncand> Btrk1PtErrB;
+    std::array<Float_t,ncand> Btrk2PtErrB;
     std::array<Float_t,ncand> Bchi2clB;
     std::array<Float_t,ncand> Btrk1EtaB;
     std::array<Float_t,ncand> ByB;
@@ -90,14 +132,20 @@ void smallfile(){
     std::array<Bool_t,ncand> Bmu1isGlobalMuonB;
     std::array<Bool_t,ncand> Bmu2isGlobalMuonB;
     std::array<Bool_t,ncand> Btrk1highPurityB;
+    std::array<Bool_t,ncand> Btrk2highPurityB;
     std::array<Float_t,ncand> Btrk1PixelHitB;
+    std::array<Float_t,ncand> Btrk2PixelHitB;
     std::array<Float_t,ncand> Btrk1StripHitB;
+    std::array<Float_t,ncand> Btrk2StripHitB;
     std::array<Float_t,ncand> Btrk1Chi2ndfB;
+    std::array<Float_t,ncand> Btrk2Chi2ndfB;
     std::array<Float_t,ncand> Btrk2PtB;
     std::array<Float_t,ncand> BalphaB;
     std::array<Float_t,ncand> Btrk2EtaB;
     std::array<Float_t,ncand> Btrk1nStripLayerB;
+    std::array<Float_t,ncand> Btrk2nStripLayerB;
     std::array<Float_t,ncand> Btrk1nPixelLayerB;
+    std::array<Float_t,ncand> Btrk2nPixelLayerB;
 
    Float_t Btrk1Dz1flatB;
    Float_t Btrk1DzError1flatB;
@@ -117,6 +165,7 @@ void smallfile(){
    Bool_t Bmu2isTriggeredflatB;
    Float_t Btrk1PtflatB;
    Float_t Btrk1PtErrflatB;
+   Float_t Btrk2PtErrflatB;
    Float_t Bchi2clflatB;
    Float_t Btrk1EtaflatB;
    Float_t ByflatB;
@@ -140,17 +189,26 @@ void smallfile(){
    Bool_t Bmu1isGlobalMuonflatB;
    Bool_t Bmu2isGlobalMuonflatB;
    Bool_t Btrk1highPurityflatB;
+   Bool_t Btrk2highPurityflatB;
    Float_t Btrk1PixelHitflatB;
+   Float_t Btrk2PixelHitflatB;
    Float_t Btrk1StripHitflatB;
+   Float_t Btrk2StripHitflatB;
    Float_t Btrk1Chi2ndfflatB;
+   Float_t Btrk2Chi2ndfflatB;
    Float_t Btrk2PtflatB;
    Float_t BalphaflatB;
    Float_t Btrk2EtaflatB;
    Float_t Btrk1nStripLayerflatB;
+   Float_t Btrk2nStripLayerflatB;
    Float_t Btrk1nPixelLayerflatB;
+   Float_t Btrk2nPixelLayerflatB;
 
     Float_t PVzB;
     Int_t BsizeB;
+    Int_t nMultB;
+    Int_t trackB;
+    
 
     Int_t pPAprimaryVertexFilterB;
     Int_t pBeamScrapingFilterB;
@@ -174,6 +232,7 @@ void smallfile(){
     std::array<Bool_t,ncand> Bmu2isTriggeredS;
     std::array<Float_t,ncand> Btrk1PtS;
     std::array<Float_t,ncand> Btrk1PtErrS;
+    std::array<Float_t,ncand> Btrk2PtErrS;
     std::array<Float_t,ncand> Bchi2clS;
     std::array<Float_t,ncand> Btrk1EtaS;
     std::array<Float_t,ncand> ByS;
@@ -197,15 +256,23 @@ void smallfile(){
     std::array<Bool_t,ncand> Bmu1isGlobalMuonS;
     std::array<Bool_t,ncand> Bmu2isGlobalMuonS;
     std::array<Bool_t,ncand> Btrk1highPurityS;
+    std::array<Bool_t,ncand> Btrk2highPurityS;
     std::array<Float_t,ncand> Btrk1PixelHitS;
+    std::array<Float_t,ncand> Btrk2PixelHitS;
     std::array<Float_t,ncand> Btrk1StripHitS;
+    std::array<Float_t,ncand> Btrk2StripHitS;
     std::array<Float_t,ncand> Btrk1Chi2ndfS;
+    std::array<Float_t,ncand> Btrk2Chi2ndfS;
     std::array<Float_t,ncand> Btrk2PtS;
     std::array<Float_t,ncand> BalphaS;
     std::array<Float_t,ncand> Btrk2EtaS;
     std::array<Float_t,ncand> BgenS;
+    std::array<Float_t,ncand> BgenptS;
+    std::array<Float_t,ncand> BgenyS;
     std::array<Float_t,ncand> Btrk1nStripLayerS;
+    std::array<Float_t,ncand> Btrk2nStripLayerS;
     std::array<Float_t,ncand> Btrk1nPixelLayerS;
+    std::array<Float_t,ncand> Btrk2nPixelLayerS;
 
     Float_t Btrk1Dz1flatS;
     Float_t Btrk1DzError1flatS;
@@ -225,6 +292,7 @@ void smallfile(){
     Bool_t Bmu2isTriggeredflatS;
     Float_t Btrk1PtflatS;
     Float_t Btrk1PtErrflatS;
+    Float_t Btrk2PtErrflatS;
     Float_t Bchi2clflatS;
     Float_t Btrk1EtaflatS;
     Float_t ByflatS;
@@ -248,29 +316,48 @@ void smallfile(){
     Bool_t Bmu1isGlobalMuonflatS;
     Bool_t Bmu2isGlobalMuonflatS;
     Bool_t Btrk1highPurityflatS;
+    Bool_t Btrk2highPurityflatS;
     Float_t Btrk1PixelHitflatS;
+    Float_t Btrk2PixelHitflatS;
     Float_t Btrk1StripHitflatS;
+    Float_t Btrk2StripHitflatS;
     Float_t Btrk1Chi2ndfflatS;
+    Float_t Btrk2Chi2ndfflatS;
     Float_t Btrk2PtflatS;
     Float_t BalphaflatS;
     Float_t Btrk2EtaflatS;
     Float_t Btrk1nStripLayerflatS;
+    Float_t Btrk2nStripLayerflatS;
     Float_t Btrk1nPixelLayerflatS;
+    Float_t Btrk2nPixelLayerflatS;
     Float_t BgenflatS;
+    Float_t BgenptflatS;
+    Float_t BgenyflatS;
 
     Float_t PVzS;
     Int_t BsizeS;
+    Int_t nMultS;
+    Int_t trackS;
 
     Int_t pPAprimaryVertexFilterS;
     Int_t pBeamScrapingFilterS;
     Int_t HLT_HIL1DoubleMu0_v1S;
+
+    Float_t weightS;
    
+    signalhi->SetBranchAddress("weight",&weightS);
+    signalnew->Branch("weight",&weightS);
+    gennew->Branch("weight",&weightS);
+
+    backgroundnew->Branch("track",&trackB,"track/I");
+    signalnew->Branch("track",&trackS,"track/I");
 
     background->SetBranchAddress("PVz",&PVzB);
     backgroundnew->Branch("PVz",&PVzB);
 
     signal->SetBranchAddress("PVz",&PVzS);
     signalnew->Branch("PVz",&PVzS);
+    gennew->Branch("PVz",&PVzS);
 
     background->SetBranchAddress("Bsize",&BsizeB);
     backgroundnew->Branch("Bsize",&BsizeB,"Bsize/I");
@@ -278,8 +365,20 @@ void smallfile(){
     signal->SetBranchAddress("Bsize",&BsizeS);
     signalnew->Branch("Bsize",&BsizeS,"Bsize/I");
 
+    backgroundroot->SetBranchAddress("EvtInfo.nMult",&nMultB);
+    backgroundnew->Branch("nMult",&nMultB,"nMult/I");
+
+    signalroot->SetBranchAddress("EvtInfo.nMult",&nMultS);
+    signalnew->Branch("nMult",&nMultS,"nMult/I");
+
     signal->SetBranchAddress("Bgen",&BgenS);
     signalnew->Branch("Bgen",&BgenflatS,"Bgen/F");
+
+    signal->SetBranchAddress("Bgenpt",&BgenptS);
+    signalnew->Branch("Bgenpt",&BgenptflatS,"Bgenpt/F");
+
+    signal->SetBranchAddress("Bgeny",&BgenyS);
+    signalnew->Branch("Bgeny",&BgenyflatS,"Bgeny/F");
 
     background->SetBranchAddress("Btrk1Dz1",&Btrk1Dz1B);
     backgroundnew->Branch("Btrk1Dz1",&Btrk1Dz1flatB,"Btrk1Dz1/F");
@@ -377,6 +476,12 @@ void smallfile(){
     signal->SetBranchAddress("Btrk1PtErr",&Btrk1PtErrS);
     signalnew->Branch("Btrk1PtErr",&Btrk1PtErrflatS,"Btrk1PtErr/F");
 
+    background->SetBranchAddress("Btrk2PtErr",&Btrk2PtErrB);
+    backgroundnew->Branch("Btrk2PtErr",&Btrk2PtErrflatB,"Btrk2PtErr/F");
+
+    signal->SetBranchAddress("Btrk2PtErr",&Btrk2PtErrS);
+    signalnew->Branch("Btrk2PtErr",&Btrk2PtErrflatS,"Btrk2PtErr/F");
+
     background->SetBranchAddress("Bchi2cl",&Bchi2clB);
     backgroundnew->Branch("Bchi2cl",&Bchi2clflatB,"Bchi2cl/F");
 
@@ -455,11 +560,23 @@ void smallfile(){
     signal->SetBranchAddress("Btrk1PixelHit",&Btrk1PixelHitS);
     signalnew->Branch("Btrk1PixelHit",&Btrk1PixelHitflatS,"Btrk1PixelHit/F");
 
+    background->SetBranchAddress("Btrk2PixelHit",&Btrk2PixelHitB);
+    backgroundnew->Branch("Btrk2PixelHit",&Btrk2PixelHitflatB,"Btrk2PixelHit/F");
+
+    signal->SetBranchAddress("Btrk2PixelHit",&Btrk2PixelHitS);
+    signalnew->Branch("Btrk2PixelHit",&Btrk2PixelHitflatS,"Btrk2PixelHit/F");
+
     background->SetBranchAddress("Btrk1StripHit",&Btrk1StripHitB);
     backgroundnew->Branch("Btrk1StripHit",&Btrk1StripHitflatB,"Btrk1StripHit/F");
 
     signal->SetBranchAddress("Btrk1StripHit",&Btrk1StripHitS);
     signalnew->Branch("Btrk1StripHit",&Btrk1StripHitflatS,"Btrk1StripHit/F");
+
+    background->SetBranchAddress("Btrk2StripHit",&Btrk2StripHitB);
+    backgroundnew->Branch("Btrk2StripHit",&Btrk2StripHitflatB,"Btrk2StripHit/F");
+
+    signal->SetBranchAddress("Btrk2StripHit",&Btrk2StripHitS);
+    signalnew->Branch("Btrk2StripHit",&Btrk2StripHitflatS,"Btrk2StripHit/F");
 
     background->SetBranchAddress("Btrk1Chi2ndf",&Btrk1Chi2ndfB);
     backgroundnew->Branch("Btrk1Chi2ndf",&Btrk1Chi2ndfflatB,"Btrk1Chi2ndf/F");
@@ -467,17 +584,35 @@ void smallfile(){
     signal->SetBranchAddress("Btrk1Chi2ndf",&Btrk1Chi2ndfS);
     signalnew->Branch("Btrk1Chi2ndf",&Btrk1Chi2ndfflatS,"Btrk1Chi2ndf/F");
 
+    background->SetBranchAddress("Btrk2Chi2ndf",&Btrk2Chi2ndfB);
+    backgroundnew->Branch("Btrk2Chi2ndf",&Btrk2Chi2ndfflatB,"Btrk2Chi2ndf/F");
+
+    signal->SetBranchAddress("Btrk2Chi2ndf",&Btrk2Chi2ndfS);
+    signalnew->Branch("Btrk2Chi2ndf",&Btrk2Chi2ndfflatS,"Btrk2Chi2ndf/F");
+
     background->SetBranchAddress("Btrk1nStripLayer",&Btrk1nStripLayerB);
     backgroundnew->Branch("Btrk1nStripLayer",&Btrk1nStripLayerflatB,"Btrk1nStripLayer/F");
 
     signal->SetBranchAddress("Btrk1nStripLayer",&Btrk1nStripLayerS);
     signalnew->Branch("Btrk1nStripLayer",&Btrk1nStripLayerflatS,"Btrk1nStripLayer/F");
 
+    background->SetBranchAddress("Btrk2nStripLayer",&Btrk2nStripLayerB);
+    backgroundnew->Branch("Btrk2nStripLayer",&Btrk2nStripLayerflatB,"Btrk2nStripLayer/F");
+
+    signal->SetBranchAddress("Btrk2nStripLayer",&Btrk2nStripLayerS);
+    signalnew->Branch("Btrk2nStripLayer",&Btrk2nStripLayerflatS,"Btrk2nStripLayer/F");
+
     background->SetBranchAddress("Btrk1nPixelLayer",&Btrk1nPixelLayerB);
     backgroundnew->Branch("Btrk1nPixelLayer",&Btrk1nPixelLayerflatB,"Btrk1nPixelLayer/F");
 
     signal->SetBranchAddress("Btrk1nPixelLayer",&Btrk1nPixelLayerS);
     signalnew->Branch("Btrk1nPixelLayer",&Btrk1nPixelLayerflatS,"Btrk1nPixelLayer/F");
+
+    background->SetBranchAddress("Btrk2nPixelLayer",&Btrk2nPixelLayerB);
+    backgroundnew->Branch("Btrk2nPixelLayer",&Btrk2nPixelLayerflatB,"Btrk2nPixelLayer/F");
+
+    signal->SetBranchAddress("Btrk2nPixelLayer",&Btrk2nPixelLayerS);
+    signalnew->Branch("Btrk2nPixelLayer",&Btrk2nPixelLayerflatS,"Btrk2nPixelLayer/F");
 
     background->SetBranchAddress("Btrk2Pt",&Btrk2PtB);
     backgroundnew->Branch("Btrk2Pt",&Btrk2PtflatB,"Btrk2Pt/F");
@@ -551,6 +686,12 @@ void smallfile(){
     signal->SetBranchAddress("Btrk1highPurity",&Btrk1highPurityS);
     signalnew->Branch("Btrk1highPurity",&Btrk1highPurityflatS,"Btrk1highPurity/O");
 
+    background->SetBranchAddress("Btrk2highPurity",&Btrk2highPurityB);
+    backgroundnew->Branch("Btrk2highPurity",&Btrk2highPurityflatB,"Btrk2highPurity/O");
+
+    signal->SetBranchAddress("Btrk2highPurity",&Btrk2highPurityS);
+    signalnew->Branch("Btrk2highPurity",&Btrk2highPurityflatS,"Btrk2highPurity/O");
+
     background->SetBranchAddress("Bmu1InPixelLayer",&Bmu1InPixelLayerB);
     backgroundnew->Branch("Bmu1InPixelLayer",&Bmu1InPixelLayerflatB,"Bmu1InPixelLayer/I");
 
@@ -595,15 +736,58 @@ void smallfile(){
 
     int nsig = signal->GetEntries();
     int nback = background->GetEntries();
+    int ngen = gen->GetEntries();
+
+    //int nsig =  100;
+    //int nback = 100;
+    //int ngen = 100;
     
     cout<<nsig<<endl;
     cout<<nback<<endl;
-    
-    for (int k=0;k<nsig;k++){
+    cout<<ngen<<endl;
+   for (int k=0;k<nsig;k++){
+
         signal->GetEntry(k);
+        signalroot->GetEntry(k);
         signalhl->GetEntry(k);
         signalskim->GetEntry(k);
+        signalhi->GetEntry(k);
         for (int s=0;s<BsizeS;s++){
+
+            auto passTrackingBPS = [&] (Tracking cut) {
+                return (Btrk1PtErrS[s]/Btrk1PtS[s] < ptErr[cut] &&
+                Btrk1Chi2ndfS[s]/(Btrk1nStripLayerS[s]+Btrk1nPixelLayerS[s])
+              < chi2Nlayer[cut]);
+            };
+
+	        auto passTrackingBsS = [&] (Tracking cut) {
+                return (Btrk1PtErrS[s]/Btrk1PtS[s] < ptErr[cut] &&
+                  Btrk1Chi2ndfS[s]/(Btrk1nStripLayerS[s]+Btrk1nPixelLayerS[s])
+                  < chi2Nlayer[cut] &&
+                  Btrk2PtErrS[s]/Btrk2PtS[s] < ptErr[cut] &&
+                  Btrk2Chi2ndfS[s]/(Btrk2nStripLayerS[s]+Btrk2nPixelLayerS[s])
+                  < chi2Nlayer[cut]);
+             };
+            
+            if (meson_n == 0){
+                if (passTrackingBPS(Tracking::tight)) {
+                    trackS = Tracking::tight;
+                } else if (passTrackingBPS(Tracking::standard)) {
+                    trackS = Tracking::standard;
+                } else {
+                    trackS = Tracking::loose;
+                }
+	         }
+	        else {
+                if (passTrackingBsS(Tracking::tight)) {
+                    trackS = Tracking::tight;
+                } else if (passTrackingBsS(Tracking::standard)) {
+                    trackS = Tracking::standard;
+                } else {
+                    trackS = Tracking::loose;
+                }
+	        }
+
             Btrk1Dz1flatS=Btrk1Dz1S[s];
             Btrk1DzError1flatS=Btrk1DzError1S[s];
             Btrk2Dz1flatS=Btrk2Dz1S[s];
@@ -622,6 +806,7 @@ void smallfile(){
             Bmu2isTriggeredflatS=Bmu2isTriggeredS[s];
             Btrk1PtflatS=Btrk1PtS[s];
             Btrk1PtErrflatS=Btrk1PtErrS[s];
+            Btrk2PtErrflatS=Btrk2PtErrS[s];
             Bchi2clflatS=Bchi2clS[s];
             Btrk1EtaflatS=Btrk1EtaS[s];
             ByflatS=ByS[s];
@@ -645,25 +830,77 @@ void smallfile(){
             Bmu1isGlobalMuonflatS=Bmu1isGlobalMuonS[s];
             Bmu2isGlobalMuonflatS=Bmu2isGlobalMuonS[s];
             Btrk1highPurityflatS=Btrk1highPurityS[s];
+            Btrk2highPurityflatS=Btrk2highPurityS[s];
             Btrk1PixelHitflatS=Btrk1PixelHitS[s];
+            Btrk2PixelHitflatS=Btrk2PixelHitS[s];
             Btrk1StripHitflatS=Btrk1StripHitS[s];
+            Btrk2StripHitflatS=Btrk2StripHitS[s];
             Btrk1Chi2ndfflatS=Btrk1Chi2ndfS[s];
+            Btrk2Chi2ndfflatS=Btrk2Chi2ndfS[s];
             Btrk2PtflatS=Btrk2PtS[s];
             BalphaflatS=BalphaS[s];
             Btrk2EtaflatS=Btrk2EtaS[s];
             Btrk1nStripLayerflatS=Btrk1nStripLayerS[s];
+            Btrk2nStripLayerflatS=Btrk2nStripLayerS[s];
             Btrk1nPixelLayerflatS=Btrk1nPixelLayerS[s];
+            Btrk2nPixelLayerflatS=Btrk2nPixelLayerS[s];
             BgenflatS=BgenS[s];
+            BgenptflatS=BgenptS[s];
+            BgenyflatS=BgenyS[s];
             signalnew->Fill();
+            
         }
-        
+        ;
+    } 
+    for (int k=0;k<ngen;k++){
+        gen->GetEntry(k);
+        signalhi->GetEntry(k);
+        signal->GetEntry(k);
+        gennew->Fill();
     }
-    
-    for (int k=0;k<nback;k++){
+
+   for (int k=0;k<nback;k++){
         background->GetEntry(k);
+        backgroundroot->GetEntry(k);
         backgroundhl->GetEntry(k);
         backgroundskim->GetEntry(k);
         for (int s=0;s<BsizeB;s++){
+
+
+            auto passTrackingBPB = [&] (Tracking cut) {
+                return (Btrk1PtErrB[s]/Btrk1PtB[s] < ptErr[cut] &&
+                Btrk1Chi2ndfB[s]/(Btrk1nStripLayerB[s]+Btrk1nPixelLayerB[s])
+              < chi2Nlayer[cut]);
+            };
+
+	        auto passTrackingBsB = [&] (Tracking cut) {
+                return (Btrk1PtErrB[s]/Btrk1PtB[s] < ptErr[cut] &&
+                  Btrk1Chi2ndfB[s]/(Btrk1nStripLayerB[s]+Btrk1nPixelLayerB[s])
+                  < chi2Nlayer[cut] &&
+                  Btrk2PtErrB[s]/Btrk2PtB[s] < ptErr[cut] &&
+                  Btrk2Chi2ndfB[s]/(Btrk2nStripLayerB[s]+Btrk2nPixelLayerB[s])
+                  < chi2Nlayer[cut]);
+             };
+            
+            if (meson_n == 0){
+                if (passTrackingBPB(Tracking::tight)) {
+                    trackB = Tracking::tight;
+                } else if (passTrackingBPB(Tracking::standard)) {
+                    trackB = Tracking::standard;
+                } else {
+                    trackB = Tracking::loose;
+                }
+	         }
+	        else {
+                if (passTrackingBsB(Tracking::tight)) {
+                    trackB = Tracking::tight;
+                } else if (passTrackingBsB(Tracking::standard)) {
+                    trackB = Tracking::standard;
+                } else {
+                    trackB = Tracking::loose;
+                }
+	        }
+
             Btrk1Dz1flatB=Btrk1Dz1B[s];
             Btrk1DzError1flatB=Btrk1DzError1B[s];
             Btrk2Dz1flatB=Btrk2Dz1B[s];
@@ -682,6 +919,7 @@ void smallfile(){
             Bmu2isTriggeredflatB=Bmu2isTriggeredB[s];
             Btrk1PtflatB=Btrk1PtB[s];
             Btrk1PtErrflatB=Btrk1PtErrB[s];
+            Btrk2PtErrflatB=Btrk2PtErrB[s];
             Bchi2clflatB=Bchi2clB[s];
             Btrk1EtaflatB=Btrk1EtaB[s];
             ByflatB=ByB[s];
@@ -705,39 +943,58 @@ void smallfile(){
             Bmu1isGlobalMuonflatB=Bmu1isGlobalMuonB[s];
             Bmu2isGlobalMuonflatB=Bmu2isGlobalMuonB[s];
             Btrk1highPurityflatB=Btrk1highPurityB[s];
+            Btrk2highPurityflatB=Btrk2highPurityB[s];
             Btrk1PixelHitflatB=Btrk1PixelHitB[s];
+            Btrk2PixelHitflatB=Btrk2PixelHitB[s];
             Btrk1StripHitflatB=Btrk1StripHitB[s];
+            Btrk2StripHitflatB=Btrk2StripHitB[s];
             Btrk1Chi2ndfflatB=Btrk1Chi2ndfB[s];
+            Btrk2Chi2ndfflatB=Btrk2Chi2ndfB[s];
             Btrk2PtflatB=Btrk2PtB[s];
             BalphaflatB=BalphaB[s];
             Btrk2EtaflatB=Btrk2EtaB[s];
             Btrk1nStripLayerflatB=Btrk1nStripLayerB[s];
+            Btrk2nStripLayerflatB=Btrk2nStripLayerB[s];
             Btrk1nPixelLayerflatB=Btrk1nPixelLayerB[s];
+            Btrk2nPixelLayerflatB=Btrk2nPixelLayerB[s];
             backgroundnew->Fill();
         }
         
-    }
+    } 
     
-    TCanvas* c = new TCanvas();
-    c->cd();
-    signalnew->Draw("Bpt");
-    c->SaveAs("test2.png");
-
+    
     ROOT::RDataFrame dS(*signalnew);
     ROOT::RDataFrame dB(*backgroundnew);
+    ROOT::RDataFrame dG(*gennew);
     cout<<"still fine"<<endl;
         
-    auto cut="(pPAprimaryVertexFilter == 1 && pBeamScrapingFilter == 1 && HLT_HIL1DoubleMu0_v1 == 1)  &&  (Bmu1isTriggered == 1 && Bmu2isTriggered == 1 ) && (Btrk1Pt > 0.5 && Bchi2cl > 0.05 && BsvpvDistance/BsvpvDisErr > 2.0 && Bpt > 2 && abs(Btrk1Eta-0.0) < 2.4  && (TMath::Abs(By)<2.4&&TMath::Abs(Bmumumass-3.096916)<0.15&&((abs(Bmu1eta)<1.2&&Bmu1pt>3.5)||(abs(Bmu1eta)>1.2&&abs(Bmu1eta)<2.1&&Bmu1pt>(5.47-1.89*abs(Bmu1eta)))||(abs(Bmu1eta)>2.1&&abs(Bmu1eta)<2.4&&Bmu1pt>1.5))&&((abs(Bmu2eta)<1.2&&Bmu2pt>3.5)||(abs(Bmu2eta)>1.2&&abs(Bmu2eta)<2.1&&Bmu2pt>(5.47-1.89*abs(Bmu2eta)))||(abs(Bmu2eta)>2.1&&abs(Bmu2eta)<2.4&&Bmu2pt>1.5))&&Bmu1TMOneStationTight&&Bmu2TMOneStationTight&&Bmu1InPixelLayer>0&&(Bmu1InPixelLayer+Bmu1InStripLayer)>5&&Bmu2InPixelLayer>0&&(Bmu2InPixelLayer+Bmu2InStripLayer)>5&&Bmu1dxyPV<0.3&&Bmu2dxyPV<0.3&&Bmu1dzPV<20&&Bmu2dzPV<20&&Bmu1isTrackerMuon&&Bmu2isTrackerMuon&&Bmu1isGlobalMuon&&Bmu2isGlobalMuon&&Btrk1highPurity&&abs(Btrk1Eta)<2.4&&Btrk1Pt>0.5)  && (Btrk1PixelHit + Btrk1StripHit > 10) &&  (Btrk1PtErr/Btrk1Pt < 0.1)&& Btrk1Chi2ndf/(Btrk1nStripLayer+Btrk1nPixelLayer) < 0.18   && (abs(PVz)<15))";
+    auto cut = "";
+    if (meson_n==0){
+        cut = "(pPAprimaryVertexFilter == 1 && pBeamScrapingFilter == 1 && HLT_HIL1DoubleMu0_v1 == 1)  &&  (Bmu1isTriggered == 1 && Bmu2isTriggered == 1 ) && (Btrk1Pt > 0.5 && Bchi2cl > 0.05 && BsvpvDistance/BsvpvDisErr > 2.0 && Bpt > 2 && abs(Btrk1Eta-0.0) < 2.4  && (TMath::Abs(By)<2.4&&TMath::Abs(Bmumumass-3.096916)<0.15&&((abs(Bmu1eta)<1.2&&Bmu1pt>3.5)||(abs(Bmu1eta)>1.2&&abs(Bmu1eta)<2.1&&Bmu1pt>(5.47-1.89*abs(Bmu1eta)))||(abs(Bmu1eta)>2.1&&abs(Bmu1eta)<2.4&&Bmu1pt>1.5))&&((abs(Bmu2eta)<1.2&&Bmu2pt>3.5)||(abs(Bmu2eta)>1.2&&abs(Bmu2eta)<2.1&&Bmu2pt>(5.47-1.89*abs(Bmu2eta)))||(abs(Bmu2eta)>2.1&&abs(Bmu2eta)<2.4&&Bmu2pt>1.5))&&Bmu1TMOneStationTight&&Bmu2TMOneStationTight&&Bmu1InPixelLayer>0&&(Bmu1InPixelLayer+Bmu1InStripLayer)>5&&Bmu2InPixelLayer>0&&(Bmu2InPixelLayer+Bmu2InStripLayer)>5&&Bmu1dxyPV<0.3&&Bmu2dxyPV<0.3&&Bmu1dzPV<20&&Bmu2dzPV<20&&Bmu1isTrackerMuon&&Bmu2isTrackerMuon&&Bmu1isGlobalMuon&&Bmu2isGlobalMuon&&Btrk1highPurity&&abs(Btrk1Eta)<2.4&&Btrk1Pt>0.5)  && (Btrk1PixelHit + Btrk1StripHit > 10) &&  (Btrk1PtErr/Btrk1Pt < 0.1)&& Btrk1Chi2ndf/(Btrk1nStripLayer+Btrk1nPixelLayer) < 0.18   && (abs(PVz)<15))";
+    }
+    else {
+        cut = "(abs(Btktkmass-1.019455)<0.015)&&(((((abs(Btktkmass-1.019455)<0.015)&& TMath::Abs(Bmumumass-3.096916)<0.15 && Bpt > 0 && Bpt < 5 && (abs(Btrk1Eta)<2.4 && abs(Btrk2Eta)<2.4 && Btrk1Pt>0.0 && Btrk2Pt>0.0) && Btrk1Pt > 0.5 && Btrk2Pt > 0.5  && Bchi2cl > 0.05 && BsvpvDistance/BsvpvDisErr > 2.0)  && ( (Bpt < 2 && Bpt > 0) || (Bpt < 3 && Bpt > 2) || (Bpt < 5 && Bpt > 3)  )))  ||  ( Bpt > 3 && ((pPAprimaryVertexFilter == 1 && pBeamScrapingFilter == 1 && HLT_HIL1DoubleMu0_v1 == 1 && (abs(PVz)<15))  &&  (Bmu1isTriggered == 1 && Bmu2isTriggered == 1 ) &&  (Bchi2cl > 0.05 && BsvpvDistance/BsvpvDisErr > 2.0)    && (TMath::Abs(By)<2.4&&TMath::Abs(Bmumumass-3.096916)<0.15&&((abs(Bmu1eta)<1.2&&Bmu1pt>3.5)||(abs(Bmu1eta)>1.2&&abs(Bmu1eta)<2.1&&Bmu1pt>(5.47-1.89*abs(Bmu1eta)))||(abs(Bmu1eta)>2.1&&abs(Bmu1eta)<2.4&&Bmu1pt>1.5))&&((abs(Bmu2eta)<1.2&&Bmu2pt>3.5)||(abs(Bmu2eta)>1.2&&abs(Bmu2eta)<2.1&&Bmu2pt>(5.47-1.89*abs(Bmu2eta)))||(abs(Bmu2eta)>2.1&&abs(Bmu2eta)<2.4&&Bmu2pt>1.5))&&Bmu1InPixelLayer>0&&(Bmu1InPixelLayer+Bmu1InStripLayer)>5&&Bmu2InPixelLayer>0&&(Bmu2InPixelLayer+Bmu2InStripLayer)>5&&Bmu1dxyPV<0.3&&Bmu2dxyPV<0.3&&Bmu1dzPV<20&&Bmu2dzPV<20&&Bmu1isTrackerMuon&&Bmu2isTrackerMuon&&Bmu1isGlobalMuon&&Bmu2isGlobalMuon)  && ( Btrk1Pt > 0.5 && Btrk2Pt > 0.5 && abs(Btrk1Eta-0.0) < 2.4 && abs(Btrk2Eta-0.0) < 2.4  && Btrk1highPurity  && Btrk2highPurity  && Btrk1PixelHit + Btrk1StripHit > 10  && Btrk2PixelHit + Btrk2StripHit > 10) &&  (Btrk1PtErr/Btrk1Pt < 0.1)  &&  (Btrk2PtErr/Btrk2Pt < 0.1)    && Btrk1Chi2ndf/(Btrk1nStripLayer+Btrk1nPixelLayer) < 0.18   && Btrk2Chi2ndf/(Btrk2nStripLayer+Btrk2nPixelLayer) < 0.18 )))";
+    }
     cout<<"still fine"<<endl;
     auto dS_cut=dS.Filter(cut);
     cout<<"still fine"<<endl;
     auto dB_cut=dB.Filter(cut);
     cout<<"still fine"<<endl;
-    dS.Snapshot("ntKp",outS);
-    dB.Snapshot("ntKp",outB);
+    if (meson_n==0){
+        dS_cut.Snapshot("ntKp",outS);
+        dG.Snapshot("ntGen",outG);
+        dB_cut.Snapshot("ntKp",outB);
+    }
+    else {
+        dS_cut.Snapshot("ntphi",outS);
+        dG.Snapshot("ntGen",outG);
+        dB_cut.Snapshot("ntphi",outB);
+    }
+    
     cout<<"still fine final"<<endl;
     cout<<*(dS_cut.Count())<<endl;
     cout<<*(dB_cut.Count())<<endl;
     outfS->Close();
+    outfG->Close();
     outfB->Close();
 }

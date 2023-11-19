@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import pandas as pd
-import utils
 import numpy as np
 import os.path
 from sklearn import metrics
@@ -19,16 +18,16 @@ def main():
     parser.add_argument('usemc' , type=int)
     parser.add_argument('-bins', type=int, nargs='+', default=[3,5,7,10,15,20,30,50,60])
     parser.add_argument('-stages', type=int, nargs='+', default=[0,2,4,7,8,9,11,15]) 
-    parser.add_argument('-cuts', type=int, nargs='+', default=[0.5,0.85,0.88,0.89,0.88,0.67,0.89,0.61]) 
+    parser.add_argument('-cuts', type=int, nargs='+', default=[0.8,0.85,0.88,0.89,0.88,0.67,0.89,0.61]) 
     opt = parser.parse_args()
     
     print("files")
     if opt.usemc == 0 :
-        fileD = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small2.root")
+        fileD = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small.root")
     else:
-        fileD = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small2.root")
+        fileD = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small.root")
     
-    model = torch.jit.load('../results/models/Py_3.0_60.0.pt')
+    model = torch.jit.load('../results/BP/models/Py_3.0_60.0.pt')
     model.eval()
 
     bin=opt.bins
@@ -38,9 +37,9 @@ def main():
     data_pred=pd.DataFrame()
    
     for i in range(len(bin)-1):
-
+        
         print(f"working on {bin[i]}-{bin[i+1]}")
-        data= utils.seldata(fileD,bin[i],bin[i+1])
+        data= utils.seldata(fileD,bin[i],bin[i+1],0)
         data_var=data[stage]
         dset = torch.tensor(data_var.to_numpy(),dtype=torch.float32)
         ypred = torch.nn.functional.softmax(model(dset),dim=1)[:,1]

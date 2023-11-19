@@ -34,8 +34,9 @@ def main():
     print("files")
     fileS = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small2.root")
     fileB = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small2.root")
-    #fileS=uproot.open("~/Desktop/UNI/LIP/mnt/data/BPMC_3_60.root")
-    #fileB=uproot.open("~/Desktop/UNI/LIP/mnt/data/BPData_3_60.root")
+    
+    #fileR=uproot.open("/user/s/smcosta/data/BPData_nom.root")
+    fileR=uproot.open("../results/rootfiles/BPData_nom_NN.root")
     
     signal,background = utils.prepdata(fileS,fileB,opt.ptmin,opt.ptmax)
     
@@ -77,7 +78,7 @@ def main():
     data_x["scale_weight"]=np.ones(len(y.to_numpy()))
     variable="NN_output"
     print("getting factors")
-    fs,fb = utils_factors.get_factors(fileS,uproot.open("/user/s/smcosta/data/BPData_nom.root"),opt.ptmin,opt.ptmax)
+    fs,fb = utils_factors.get_factors(fileS,fileR,opt.ptmin,opt.ptmax)
     sig,cuts,signeff,backeff=utils.significancecalc(data_x,100,variable,fs,fb)
 
     plt.figure()
@@ -119,26 +120,6 @@ def main():
     plt.colorbar()
     plt.savefig("../results/sel/corrmatrix_back_{}_{}.pdf".format(opt.ptmin,opt.ptmax), bbox_inches='tight')
 
-
-    data_imp=pd.DataFrame(dataset.X.detach().numpy())
-    data_imp.columns=stage
-    tab=[]
-    for char in stage:
-        pred=0
-        for i in range(10):
-            data_shuf=data_imp.copy()
-            random.shuffle(data_shuf[char])
-            pred+=torch.nn.functional.softmax(model(torch.tensor(data_shuf.values)),dim=1)[:,1].detach().numpy()
-        pred=pred/10
-        tab.append(abs(ypred.detach().numpy()-pred).mean().item())
-
-
-    plt.clf()
-    plt.title("Feature importance")
-    plt.bar(stage,tab)
-    plt.ylabel("DNN_output difference")
-    plt.xticks(rotation=45)
-    plt.savefig("../results/sel/%s/feature_importance.pdf" % config, bbox_inches='tight')
 
     
 

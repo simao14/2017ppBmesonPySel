@@ -40,10 +40,20 @@ def varset(stages):
         stage.append(var[stages[i]])
     return stage 
 
-def prepdata(fileS,fileB,ptmin, ptmax):
+def prepdata(fileS,fileB,ptmin, ptmax,meson_n):
     
-    treeS = fileS["ntKp"]
-    treeB = fileB["ntKp"]
+    if meson_n==0:
+      treeS = fileS["ntKp"]
+      treeB = fileB["ntKp"]
+      mass = 5.27929
+      lside = 0.25
+      rside = 0.30
+    else:
+      treeS = fileS["ntphi"]
+      treeB = fileB["ntphi"]
+      mass = 5.36682
+      lside = 0.20
+      rside = 0.30
     
     signal = treeS.arrays(library="pd")
     background = treeB.arrays(library="pd")
@@ -68,16 +78,19 @@ def prepdata(fileS,fileB,ptmin, ptmax):
     
     
     cutS = ( (signal.Bgen==23333) & (signal.Bpt>ptmin) & (signal.Bpt<ptmax) )
-    cutB = ( (((background.Bmass - 5.27929 ) > 0.25) &  ((background.Bmass - 5.27929) < 0.30)) & (background.Bpt>ptmin) & (background.Bpt<ptmax) )
+    cutB = ( (((background.Bmass - mass ) > lside) &  ((background.Bmass - mass) < rside)) & (background.Bpt>ptmin) & (background.Bpt<ptmax) )
     
     signal_cut=signal[cutS]
     background_cut=background[cutB]
 
     return signal_cut,background_cut
 
-def seldata(fileD,ptmin, ptmax):
+def seldata(fileD,ptmin, ptmax,meson_n):
     
-    treeD = fileD["ntKp"]
+    if meson_n == 0:
+      treeD = fileD["ntKp"]
+    else:
+       treeD = fileD["ntphi"]
 
     data = treeD.arrays(library="pd")
     
@@ -103,10 +116,10 @@ def significance (s,b):
     sig = s/math.sqrt(s+b)
   return sig if not np.isnan(sig) else 0
  
-def varplot(stage,signal,backround,outname,typename):
+def varplot(stage,signal,backround,outname,typename,meson):
 
-  if not os.path.exists(f"../results/{typename}/{outname}/Variables"):
-        os.makedirs(f"../results/{typename}/{outname}/Variables")
+  if not os.path.exists(f"../results/{meson}/{typename}/{outname}/Variables"):
+        os.makedirs(f"../results/{meson}/{typename}/{outname}/Variables")
 
   for i in stage:
     plt.clf()
@@ -115,7 +128,7 @@ def varplot(stage,signal,backround,outname,typename):
     plt.legend()
     plt.ylabel("nº of entries")
     plt.xlabel(i)
-    plt.savefig(f"../results/{typename}/{outname}/Variables/{i}_distribution.png")
+    plt.savefig(f"../results/{meson}/{typename}/{outname}/Variables/{i}_distribution.png")
 
 def significancecalc(data,Ncuts,variable,fs,fb,quant=1):
   if quant==1:

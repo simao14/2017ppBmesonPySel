@@ -15,10 +15,15 @@ from ROOT import RooProduct
 import numpy as np
 import math
 
-def prepdata(fileS,fileB,ptmin, ptmax):
+def prepdata(fileS,fileB,ptmin, ptmax, meson_n):
     
-    treeS = fileS["ntKp"]
-    treeB = fileB["ntKp"]
+    if meson_n==0:
+      treeS = fileS["ntKp"]
+      treeB = fileB["ntKp"]
+      
+    else:
+      treeS = fileS["ntphi"]
+      treeB = fileB["ntphi"]
     
     signal = treeS.arrays(library="pd")
     background = treeB.arrays(library="pd")
@@ -31,13 +36,13 @@ def prepdata(fileS,fileB,ptmin, ptmax):
 
     return signal_cut,background_cut
 
-def get_factors(fileS,fileB,ptmin, ptmax):
+def get_factors(fileS,fileB,ptmin, ptmax, meson_n):
 
     bins = 100
 
     mmin = 5.0
     mmax = 6.0
-    dmc, dd = prepdata(fileS,fileB,ptmin, ptmax)
+    dmc, dd = prepdata(fileS,fileB,ptmin, ptmax, meson_n)
 
     hmass = TH1F("hmass",";B-candidate mass (GeV)", bins, mmin, mmax)
 
@@ -95,6 +100,7 @@ def get_factors(fileS,fileB,ptmin, ptmax):
 
     n_back_val=n_back.getVal()
     n_sig_val=n_signal.getVal()
+
 
     bkg_integral1 = background_factor.createIntegral(argset, RooFit.NormSet(argset), RooFit.Range("bkg range 1"))
     bkg_integral2 = background_factor.createIntegral(argset, RooFit.NormSet(argset), RooFit.Range("bkg range 2"))
