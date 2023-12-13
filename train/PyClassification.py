@@ -100,8 +100,8 @@ def main():
     opt = parser.parse_args()
     
     print("files")
-    fileS = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small2.root")
-    fileB = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small2.root")
+    fileS = uproot.open("/lstore/cms/simao/sample/BPMC_3_60_small.root")
+    fileB = uproot.open("/lstore/cms/simao/sample/BPData_3_60_small.root")
     #fileS=uproot.open("~/Desktop/UNI/LIP/mnt/data/BPMC_3_60.root")
     #fileB=uproot.open("~/Desktop/UNI/LIP/mnt/data/BPData_3_60.root")
     
@@ -272,7 +272,7 @@ def main():
     tab=[]
     #tab2=[]
     #ynom=predict(model,test_X)
-    for char in stage:
+    for char in stage:          #This part can take a long time, comment to speed up run time
         pred=0
         for i in range(10):
             data_shuf=data_imp.copy()

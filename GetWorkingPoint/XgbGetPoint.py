@@ -35,8 +35,8 @@ def main():
     fileS = uproot.open(f"/lstore/cms/simao/sample/{meson}MC_{binmin}_{binmax}_small.root")
     fileB = uproot.open(f"/lstore/cms/simao/sample/{meson}Data_{binmin}_{binmax}_small.root")
     
-    #fileR = uproot.open(f"/user/s/smcosta/data/{meson}Data_nom.root")
-    fileR=uproot.open(f"../results/rootfiles/{meson}Data_nom_BDT.root") #use this only for pt 3--5
+    fileR = uproot.open(f"/user/s/smcosta/data/{meson}Data_nom.root")
+    #fileR=uproot.open(f"../results/rootfiles/{meson}Data_nom_BDT.root") #use this only for pt 3--5
     
     signal,background = utils.prepdata(fileS,fileB,opt.ptmin,opt.ptmax,opt.meson)
     

@@ -107,7 +107,7 @@ def main():
         os.makedirs(f"../results/{meson}/models")
     
     
-    #bst.save_model(f"../results/{meson}/models/Xgb_{int(opt.ptmin)}_{int(opt.ptmax)}.model")
+    bst.save_model(f"../results/{meson}/models/Xgb_{int(opt.ptmin)}_{int(opt.ptmax)}.model")
 
     stagelist=utils.replacespecial(stages)
     config = "BDT-{}-{}-{}".format(opt.ptmin, opt.ptmax,stagelist)
@@ -123,7 +123,7 @@ def main():
     plt.legend()
     plt.xlabel("Iteration")
     plt.ylabel("Error")
-    #plt.savefig(f"../results/{meson}/train/{config}/accuracy_per_iter.pdf", bbox_inches='tight')
+    plt.savefig(f"../results/{meson}/train/{config}/accuracy_per_iter.pdf", bbox_inches='tight')
 
     plt.clf()
     plt.plot(epochs,evals_result["train"]["auc"],label="train AUC")
@@ -131,7 +131,7 @@ def main():
     plt.legend()
     plt.xlabel("Iteration")
     plt.ylabel("AUC")
-    #plt.savefig(f"../results/{meson}/train/{config}/ROC_auc_per_iter.pdf", bbox_inches='tight')
+    plt.savefig(f"../results/{meson}/train/{config}/ROC_auc_per_iter.pdf", bbox_inches='tight')
     
     yscore = bst.predict(dtest)
     nn_fpr, nn_tpr, _ = metrics.roc_curve(test_y, yscore)
@@ -143,7 +143,7 @@ def main():
     plt.plot(nn_tpr, 1-nn_fpr, label=f'auc:{auc:.3f};')
     plt.legend()
     plt.grid(visible=True)
-    #plt.savefig(f'../results/{meson}/train/{config}/ROC-Curve.pdf', bbox_inches='tight')
+    plt.savefig(f'../results/{meson}/train/{config}/ROC-Curve.pdf', bbox_inches='tight')
     
 
     data_x=pd.DataFrame(test_x)
@@ -161,7 +161,7 @@ def main():
     plt.xlabel(variable +' cut')
     plt.ylabel('Significance')
     plt.legend()
-    #plt.savefig(f"../results/{meson}/train/{config}/significance.pdf", bbox_inches='tight')
+    plt.savefig(f"../results/{meson}/train/{config}/significance.pdf", bbox_inches='tight')
 
     plt.clf()
     plt.xlabel("BDT_output cut")
@@ -169,7 +169,7 @@ def main():
     plt.plot(cuts, signeff,label="Signal")
     plt.plot(cuts, backeff,label="background")
     plt.legend()
-    #plt.savefig(f'../results/{meson}/train/{config}/sig_back_eff.pdf', bbox_inches='tight')
+    plt.savefig(f'../results/{meson}/train/{config}/sig_back_eff.pdf', bbox_inches='tight')
 
 
 
